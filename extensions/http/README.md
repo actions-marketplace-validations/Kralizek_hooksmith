@@ -1,12 +1,14 @@
 # @hooksmith/http
 
-HTTP listeners and request helpers for Hooksmith.
+HTTP listeners, enrichers, transformers, and request helpers for Hooksmith.
 
 ## Listeners
 
 - `httpRequest` sends an HTTP request with an arbitrary method.
 - `httpGet` sends a GET request.
 - `httpPost` sends a POST request.
+- `httpPut` sends a PUT request.
+- `httpDelete` sends a DELETE request.
 
 All request values that commonly depend on the current event can be provided as
 either constants or factories.
@@ -82,9 +84,160 @@ the common exact-status case and can be used either directly as `response` or as
 `ListenerResult.data`. `errorMap` does the same for failed responses. If the
 relevant mapper is omitted, the complete HTTP response report is returned.
 
+HTTP listeners can also be used as pipeline side effects through `tap(...)`:
+
+```ts
+import { httpPost, jsonBody } from "@hooksmith/http";
+import { pipe, tap } from "@hooksmith/pipeline";
+
+const listener = pipe(
+  tap(httpPost({
+    url: "https://example.com/audit",
+    body: jsonBody((event) => event.data),
+  })),
+  finalListener,
+);
+```
+
+The current pipeline value is passed as `event.data`; a failed HTTP listener
+fails the tap while a successful one leaves the pipeline value unchanged.
+
+## Enrichers
+
+- `fetchEnrichment<TEvent, TResponse = EventEnrichment>` sends an HTTP request
+  with an arbitrary method, parses the JSON response, and maps it to event
+  enrichment.
+- `getEnrichment<TEvent, TResponse = EventEnrichment>` performs the same
+  operation with GET.
+
+The pair follows the same request → fetch → get layering as the JSON transformer
+family. Use `fetchEnrichment` when a method other than GET is needed; use
+`getEnrichment` for the common GET case.
+
+If the endpoint already returns an `EventEnrichment`, no mapper is required:
+
+```ts
+const enricher = getEnrichment({
+  url: (event) => `https://example.com/enrichment/${event.type}`,
+});
+```
+
+Use `map` when the response represents domain data that should be projected into
+enrichment metadata:
+
+```ts
+const enricher = getEnrichment<Event, { plan: string }>({
+  url: (event) => `https://example.com/tenants/${event.metadata?.tenantId}`,
+  map: (_event, tenant) => ({
+    metadata: {
+      tenantPlan: tenant.plan,
+    },
+  }),
+});
+```
+
+`fetchEnrichment` also supports JSON request bodies:
+
+```ts
+const enricher = fetchEnrichment({
+  method: "POST",
+  url: "https://example.com/enrich",
+  body: (event) => ({ type: event.type }),
+});
+```
+
+Unsuccessful HTTP responses throw before the response body is parsed.
+
+## Transformers
+
+- `fetchJson<TInput, TResponse, TOutput = TResponse>` sends an HTTP request with
+  an arbitrary method and parses the JSON response.
+- `getJson<TInput, TResponse, TOutput = TResponse>` performs a GET request and
+  parses the JSON response.
+- `postJson<TInput, TResponse, TOutput = TResponse>` performs a POST request,
+  sends JSON, and parses the JSON response.
+
+All JSON transformers assume the response body is JSON that should become part
+of the data flow. They can resolve the URL and headers from the current pipeline
+value and `TransformContext`. Unsuccessful HTTP responses throw, so the pipeline
+reports them as transformation failures.
+
+Use `fetchJson` when the method is not covered by a convenience transformer:
+
+```ts
+const transformer = fetchJson<
+  { id: string },
+  { updated: boolean },
+  { id: string; updated: boolean }
+>({
+  method: "PATCH",
+  url: ({ id }) => `https://example.com/items/${id}`,
+  body: { enabled: true },
+  map: (input, response) => ({ ...input, updated: response.updated }),
+});
+```
+
+Without a mapper, the parsed JSON response becomes the next pipeline value:
+
+```ts
+import { getJson } from "@hooksmith/http";
+import { pipe, project } from "@hooksmith/pipeline";
+
+const listener = pipe(
+  project((event: { userId: string }) => event.userId),
+  getJson<string, { id: string; email: string }>({
+    url: (userId) => `https://example.com/users/${userId}`,
+  }),
+  finalListener,
+);
+```
+
+Use `map` when the next value should combine the current input with the JSON
+response:
+
+```ts
+interface Order {
+  orderId: string;
+  customerId: string;
+}
+
+interface Customer {
+  name: string;
+}
+
+const enrichOrder = getJson<
+  Order,
+  Customer,
+  Order & { customer: Customer }
+>({
+  url: ({ customerId }) => `https://example.com/customers/${customerId}`,
+  map: (order, customer) => ({ ...order, customer }),
+});
+```
+
+`postJson` serializes the current value as the request body by default:
+
+```ts
+const transformer = postJson<
+  { title: string },
+  { id: string; title: string }
+>({
+  url: "https://example.com/posts",
+});
+```
+
+Use `body` when the request payload should differ from the current value:
+
+```ts
+postJson<{ id: string; title: string }, { accepted: boolean }>({
+  url: "https://example.com/posts",
+  body: ({ id }) => ({ postId: id }),
+});
+```
+
 ## Helpers
 
-- `headers(...)` combines static and event-derived header sources.
+- `headers(...)` combines static and input-derived header sources.
 - `bearerAuth(...)` adds a Bearer authorization header.
 - `basicAuth(...)` adds an HTTP Basic authorization header.
 - `jsonBody(...)` serializes a value and sets `Content-Type: application/json`

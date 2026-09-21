@@ -1,27 +1,41 @@
 # hooksmith
 
-Hooksmith is a small, generic event routing runtime for Deno. It reads one event document, evaluates configured routes in declaration order, and invokes listeners for every matching route.
+[![CI](https://github.com/Kralizek/hooksmith/actions/workflows/ci.yml/badge.svg)](https://github.com/Kralizek/hooksmith/actions/workflows/ci.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/Kralizek/hooksmith)](https://github.com/Kralizek/hooksmith/releases/latest)
 
-The project deliberately keeps event production outside the runtime. A static-site pipeline, a release workflow, a deployment system, or any other producer can serialize an event as YAML or JSON and hand it to Hooksmith.
+Hooksmith is a small, generic event-processing toolkit for Deno. It hydrates event documents, evaluates configured routes, and invokes listeners for every matching route. Around that runtime, the ecosystem adds typed listener-side pipelines, reusable conditions and HTTP listeners, command-line, streaming, HTTP server, and AWS Lambda hosts, a GitHub Action, and provider-specific extensions.
+
+The project deliberately keeps event production outside the runtime. A static-site pipeline, a release workflow, a deployment system, an AWS event source, or any other producer can serialize or adapt an event and hand it to Hooksmith.
 
 ## Status
 
-Hooksmith is at the beginning of its design and implementation. The packages are versioned together and the public API should be considered experimental.
+Hooksmith is at the beginning of its design and implementation. The packages in this repository are versioned together and the public API should be considered experimental.
 
 ## Package family
 
-The Hooksmith packages are versioned and released together.
+The Hooksmith runtime packages in this repository are versioned and released together.
 
 | Package | Latest | Downloads | Purpose |
 | --- | --- | --- | --- |
 | [`@hooksmith/core`](https://jsr.io/@hooksmith/core) | [![latest](https://jsr.io/badges/@hooksmith/core)](https://jsr.io/@hooksmith/core) | [![downloads](https://jsr.io/badges/@hooksmith/core/total-downloads)](https://jsr.io/@hooksmith/core) | Public contracts for events, routes, conditions, listeners, execution context, and listener results. |
 | [`@hooksmith/pipeline`](https://jsr.io/@hooksmith/pipeline) | [![latest](https://jsr.io/badges/@hooksmith/pipeline)](https://jsr.io/@hooksmith/pipeline) | [![downloads](https://jsr.io/badges/@hooksmith/pipeline/total-downloads)](https://jsr.io/@hooksmith/pipeline) | Typed listener-side data transformations and composition helpers. |
 | [`@hooksmith/runtime`](https://jsr.io/@hooksmith/runtime) | [![latest](https://jsr.io/badges/@hooksmith/runtime)](https://jsr.io/@hooksmith/runtime) | [![downloads](https://jsr.io/badges/@hooksmith/runtime/total-downloads)](https://jsr.io/@hooksmith/runtime) | Event hydration, validation, routing, planning, listener execution, fallback handling, and run reports. |
-| [`@hooksmith/cli`](https://jsr.io/@hooksmith/cli) | [![latest](https://jsr.io/badges/@hooksmith/cli)](https://jsr.io/@hooksmith/cli) | [![downloads](https://jsr.io/badges/@hooksmith/cli/total-downloads)](https://jsr.io/@hooksmith/cli) | Command-line interface for loading events and configuration, running or planning events, and rendering reports. |
 | [`@hooksmith/standard`](https://jsr.io/@hooksmith/standard) | [![latest](https://jsr.io/badges/@hooksmith/standard)](https://jsr.io/@hooksmith/standard) | [![downloads](https://jsr.io/badges/@hooksmith/standard/total-downloads)](https://jsr.io/@hooksmith/standard) | Standard generic conditions, condition composition, and basic listeners for authoring Hooksmith configuration. |
 | [`@hooksmith/http`](https://jsr.io/@hooksmith/http) | [![latest](https://jsr.io/badges/@hooksmith/http)](https://jsr.io/@hooksmith/http) | [![downloads](https://jsr.io/badges/@hooksmith/http/total-downloads)](https://jsr.io/@hooksmith/http) | HTTP request listeners plus helpers for headers, authentication, request bodies, status assertions, response mapping, and reporting. |
+| [`@hooksmith/webhooks`](https://jsr.io/@hooksmith/webhooks) | [![latest](https://jsr.io/badges/@hooksmith/webhooks)](https://jsr.io/@hooksmith/webhooks) | [![downloads](https://jsr.io/badges/@hooksmith/webhooks/total-downloads)](https://jsr.io/@hooksmith/webhooks) | Reusable HTTP webhook ingress mappers with provider-specific subpaths such as Amazon SNS. |
+| [`@hooksmith/opentelemetry`](https://jsr.io/@hooksmith/opentelemetry) | [![latest](https://jsr.io/badges/@hooksmith/opentelemetry)](https://jsr.io/@hooksmith/opentelemetry) | [![downloads](https://jsr.io/badges/@hooksmith/opentelemetry/total-downloads)](https://jsr.io/@hooksmith/opentelemetry) | OpenTelemetry integration that connects Hooksmith telemetry to the global OpenTelemetry API providers without configuring an SDK or exporter. |
 
-For extension authors, `@hooksmith/core` is the primary dependency. Applications invoking Hooksmith from the command line normally use `@hooksmith/cli`. `@hooksmith/pipeline` provides listener-side transformation composition without depending on the runtime engine. `@hooksmith/standard` provides reusable configuration building blocks without depending on the runtime engine, while `@hooksmith/http` provides protocol-level HTTP listeners that provider-specific extensions can build on.
+For extension authors, `@hooksmith/core` is the primary dependency. `@hooksmith/pipeline` provides listener-side transformation composition without depending on the runtime engine. `@hooksmith/standard` provides reusable configuration building blocks without depending on the runtime engine, `@hooksmith/http` provides protocol-level HTTP listeners that provider-specific extensions can build on, `@hooksmith/webhooks` provides reusable ingress mappers for vendor webhook protocols, and `@hooksmith/opentelemetry` bridges Hooksmith telemetry to OpenTelemetry providers.
+
+## Hosts
+
+Hooksmith hosts provide environments for loading and running a Hooksmith runtime. Hosts can live in separate repositories and follow their own release cadence.
+
+| Package | Latest | Downloads | Repository | Purpose |
+| --- | --- | --- | --- | --- |
+| [`@hooksmith/aws-lambda`](https://jsr.io/@hooksmith/aws-lambda) | [![latest](https://jsr.io/badges/@hooksmith/aws-lambda)](https://jsr.io/@hooksmith/aws-lambda) | [![downloads](https://jsr.io/badges/@hooksmith/aws-lambda/total-downloads)](https://jsr.io/@hooksmith/aws-lambda) | [`aws`](https://github.com/Kralizek/hooksmith-aws) | AWS Lambda host for Hooksmith runtimes. |
+| [`@hooksmith/cli`](https://jsr.io/@hooksmith/cli) | [![latest](https://jsr.io/badges/@hooksmith/cli)](https://jsr.io/@hooksmith/cli) | [![downloads](https://jsr.io/badges/@hooksmith/cli/total-downloads)](https://jsr.io/@hooksmith/cli) | [`cli`](https://github.com/Kralizek/hooksmith-cli) | Command-line and streaming host, also distributed as a Docker image and GitHub Action. |
+| [`@hooksmith/server`](https://jsr.io/@hooksmith/server) | [![latest](https://jsr.io/badges/@hooksmith/server)](https://jsr.io/@hooksmith/server) | [![downloads](https://jsr.io/badges/@hooksmith/server/total-downloads)](https://jsr.io/@hooksmith/server) | [`server`](https://github.com/Kralizek/hooksmith-server) | Long-running HTTP server host for processing Hooksmith events and adapting webhook ingress. |
 
 ## External extensions
 
@@ -29,32 +43,36 @@ Provider-specific extensions can live in separate repositories and follow their 
 
 | Package | Latest | Downloads | Repository | Purpose |
 | --- | --- | --- | --- | --- |
-| [`@hooksmith/bluesky`](https://jsr.io/@hooksmith/bluesky) | [![latest](https://jsr.io/badges/@hooksmith/bluesky)](https://jsr.io/@hooksmith/bluesky) | [![downloads](https://jsr.io/badges/@hooksmith/bluesky/total-downloads)](https://jsr.io/@hooksmith/bluesky) | [`hooksmith-social`](https://github.com/Kralizek/hooksmith-social) | Publish posts to Bluesky using an account identifier and app password. |
-| [`@hooksmith/discord`](https://jsr.io/@hooksmith/discord) | [![latest](https://jsr.io/badges/@hooksmith/discord)](https://jsr.io/@hooksmith/discord) | [![downloads](https://jsr.io/badges/@hooksmith/discord/total-downloads)](https://jsr.io/@hooksmith/discord) | [`hooksmith-notifications`](https://github.com/Kralizek/hooksmith-notifications) | Send messages through Discord webhooks. |
-| [`@hooksmith/mastodon`](https://jsr.io/@hooksmith/mastodon) | [![latest](https://jsr.io/badges/@hooksmith/mastodon)](https://jsr.io/@hooksmith/mastodon) | [![downloads](https://jsr.io/badges/@hooksmith/mastodon/total-downloads)](https://jsr.io/@hooksmith/mastodon) | [`hooksmith-social`](https://github.com/Kralizek/hooksmith-social) | Publish statuses to Mastodon-compatible instances using a user access token. |
-| [`@hooksmith/slack`](https://jsr.io/@hooksmith/slack) | [![latest](https://jsr.io/badges/@hooksmith/slack)](https://jsr.io/@hooksmith/slack) | [![downloads](https://jsr.io/badges/@hooksmith/slack/total-downloads)](https://jsr.io/@hooksmith/slack) | [`hooksmith-notifications`](https://github.com/Kralizek/hooksmith-notifications) | Send messages through the Slack Web API. |
-| [`@hooksmith/teams`](https://jsr.io/@hooksmith/teams) | [![latest](https://jsr.io/badges/@hooksmith/teams)](https://jsr.io/@hooksmith/teams) | [![downloads](https://jsr.io/badges/@hooksmith/teams/total-downloads)](https://jsr.io/@hooksmith/teams) | [`hooksmith-notifications`](https://github.com/Kralizek/hooksmith-notifications) | Send messages through Microsoft Teams Workflows webhooks. |
+| [`@hooksmith/aws`](https://jsr.io/@hooksmith/aws) | [![latest](https://jsr.io/badges/@hooksmith/aws)](https://jsr.io/@hooksmith/aws) | [![downloads](https://jsr.io/badges/@hooksmith/aws/total-downloads)](https://jsr.io/@hooksmith/aws) | [`aws`](https://github.com/Kralizek/hooksmith-aws) | AWS event adapters, service listeners, and pipeline transformers. |
+| [`@hooksmith/bluesky`](https://jsr.io/@hooksmith/bluesky) | [![latest](https://jsr.io/badges/@hooksmith/bluesky)](https://jsr.io/@hooksmith/bluesky) | [![downloads](https://jsr.io/badges/@hooksmith/bluesky/total-downloads)](https://jsr.io/@hooksmith/bluesky) | [`social`](https://github.com/Kralizek/hooksmith-social) | Publish posts to Bluesky using an account identifier and app password. |
+| [`@hooksmith/discord`](https://jsr.io/@hooksmith/discord) | [![latest](https://jsr.io/badges/@hooksmith/discord)](https://jsr.io/@hooksmith/discord) | [![downloads](https://jsr.io/badges/@hooksmith/discord/total-downloads)](https://jsr.io/@hooksmith/discord) | [`notifications`](https://github.com/Kralizek/hooksmith-notifications) | Send messages through Discord webhooks. |
+| [`@hooksmith/mastodon`](https://jsr.io/@hooksmith/mastodon) | [![latest](https://jsr.io/badges/@hooksmith/mastodon)](https://jsr.io/@hooksmith/mastodon) | [![downloads](https://jsr.io/badges/@hooksmith/mastodon/total-downloads)](https://jsr.io/@hooksmith/mastodon) | [`social`](https://github.com/Kralizek/hooksmith-social) | Publish statuses to Mastodon-compatible instances using a user access token. |
+| [`@hooksmith/slack`](https://jsr.io/@hooksmith/slack) | [![latest](https://jsr.io/badges/@hooksmith/slack)](https://jsr.io/@hooksmith/slack) | [![downloads](https://jsr.io/badges/@hooksmith/slack/total-downloads)](https://jsr.io/@hooksmith/slack) | [`notifications`](https://github.com/Kralizek/hooksmith-notifications) | Send messages through the Slack Web API. |
+| [`@hooksmith/teams`](https://jsr.io/@hooksmith/teams) | [![latest](https://jsr.io/badges/@hooksmith/teams)](https://jsr.io/@hooksmith/teams) | [![downloads](https://jsr.io/badges/@hooksmith/teams/total-downloads)](https://jsr.io/@hooksmith/teams) | [`notifications`](https://github.com/Kralizek/hooksmith-notifications) | Send messages through Microsoft Teams Workflows webhooks. |
+| [`@hooksmith/telegram`](https://jsr.io/@hooksmith/telegram) | [![latest](https://jsr.io/badges/@hooksmith/telegram)](https://jsr.io/@hooksmith/telegram) | [![downloads](https://jsr.io/badges/@hooksmith/telegram/total-downloads)](https://jsr.io/@hooksmith/telegram) | [`notifications`](https://github.com/Kralizek/hooksmith-notifications) | Telegram notification listener with Bot API messaging and typed event-driven configuration. |
 
 ## Repository
 
 ```text
 packages/
-  core/       Public contracts for extension authors
-  pipeline/   Typed listener-side transformation pipelines
-  runtime/    Validation, routing, execution, planning, and reports
-  cli/        Event loading, config discovery, formatting, and process behavior
+  core/            Public contracts for extension authors
+  opentelemetry/   OpenTelemetry bridge for Hooksmith telemetry
+  pipeline/        Typed listener-side transformation pipelines
+  runtime/         Validation, routing, execution, planning, and reports
 extensions/
   standard/   Generic conditions, composition, and basic listeners
   http/       HTTP request listeners and request/response helpers
-action.yml    Primary Hooksmith GitHub Action
-actions/      Reserved for future specialized actions
+  webhooks/   HTTP webhook ingress mappers grouped by provider subpath
 examples/
-  basic/      Minimal event and configuration example
-  pipeline/   Listener-side transformation composition example
-  http/       HTTP listener and response-mapping example
+  basic/                   Minimal event and configuration example
+  pipeline/                Listener-side transformation composition
+  http/                    HTTP listener and response mapping
+  external-extensions/     Isolated external JSR extensions
+  remote-extension/        Unpublished remote extension integration
+  aws-sqs-slack-lambda/    SQS -> Hooksmith -> Slack Lambda example
 ```
 
-The main runtime dependency direction is intentionally one-way: `core <- runtime <- cli`. The pipeline, standard, and HTTP packages depend only on `core`.
+The main runtime dependency direction is intentionally one-way: `core <- runtime`. The pipeline, standard, HTTP, and webhooks packages depend only on `core`; the OpenTelemetry package also depends on `core` and bridges it to the OpenTelemetry API.
 
 ## Event model
 
@@ -87,7 +105,7 @@ The serialized `EventDocument` uses a string timestamp and can be represented as
 
 ## Configuration
 
-Hooksmith loads `./hooksmith.config.ts` from the current working directory by default. Configuration is ordinary TypeScript and can import reusable listeners, conditions, and routes through Deno's module system.
+Configuration is ordinary TypeScript and can import reusable listeners, conditions, and routes through Deno's module system.
 
 ```ts
 import type { Config } from "@hooksmith/core";
@@ -126,89 +144,25 @@ An event can match multiple routes. Routes and listeners execute sequentially in
 
 A condition that throws is an unrecoverable routing error and aborts the run. Listener failures are collected while later listeners continue to run; the process still exits with code `1` if any listener fails.
 
-## GitHub Action
+## Pipeline
 
-GitHub Actions workflows can run Hooksmith without installing Deno explicitly:
+`@hooksmith/pipeline` composes typed transformations into an ordinary Hooksmith listener. The runtime remains unaware of the pipeline internals.
 
-```yaml
-- id: hooksmith
-  uses: Kralizek/hooksmith@v0
-  with:
-    event: .hooksmith/event.yaml
-```
+Current operators include `project`, `tap`, `parallel`, `when`, `match`, `split`, `each`, and `merge`. `each(listener)` provides terminal fan-out, while `tap(listener)` invokes a listener as a side effect and keeps the current value flowing downstream.
 
-`event` is required. `config` defaults to `hooksmith.config.ts`, `plan` defaults to `false`, and `report-path` is optional.
+See [`packages/pipeline`](packages/pipeline) for detailed examples and type semantics.
 
-The Action always writes the complete JSON run report to a file. When `report-path` is omitted, the report is written under the runner temporary directory at `${{ runner.temp }}/hooksmith/report.json`. Relative custom report paths are resolved from the caller workspace, absolute paths are preserved, and parent directories are created automatically.
+## CLI and GitHub Action
 
-The Action exposes three small outputs instead of embedding the full report in GitHub output data:
-
-- `success` — whether the Hooksmith run succeeded.
-- `mode` — `run` or `plan`.
-- `report-path` — absolute path to the JSON report file.
-
-For example:
-
-```yaml
-- name: Inspect Hooksmith report
-  run: jq . "${{ steps.hooksmith.outputs.report-path }}"
-```
-
-A custom report location can be supplied when needed:
-
-```yaml
-- id: hooksmith
-  uses: Kralizek/hooksmith@v0
-  with:
-    event: .hooksmith/event.yaml
-    config: hooksmith.config.ts
-    report-path: artifacts/hooksmith-report.json
-    plan: false
-```
-
-The Action installs Deno and invokes the exact `@hooksmith/cli` version corresponding to the Action release. Paths are resolved from the caller's workspace, so the same event documents, configuration modules, and Deno import mappings used by direct CLI execution continue to work.
-
-## CLI
-
-```text
-hooksmith --help
-hooksmith -h
-hooksmith --version
-hooksmith -v
-hooksmith run <event-file|-> [options]
-```
-
-Run options:
-
-```text
--c, --config <path>          Config file (default: hooksmith.config.ts)
-    --format table|json|tsv  Report format (default: table)
-    --plan                   Plan the event without invoking listeners
-```
-
-Only one event document is processed per invocation. `.yaml`, `.yml`, and `.json` are supported.
-
-Use `-` as the event input to read exactly one event from stdin:
-
-```sh
-cat event.json | hooksmith run - -c hooksmith.config.ts
-```
-
-`--plan` evaluates routing and reports the listeners that would run without invoking them.
-
-The report is written to stdout. All logs and diagnostics are written to stderr, so machine-readable output can be redirected safely:
-
-```sh
-deno run -A jsr:@hooksmith/cli run event.yaml --format json > report.json
-```
+The Hooksmith CLI and GitHub Action are maintained in [`Kralizek/hooksmith-cli`](https://github.com/Kralizek/hooksmith-cli). See that repository for command usage and Action integration.
 
 ## Extensions
 
 Hooksmith configuration can consume extension modules from JSR, local files, remote repositories, or import-map aliases. See [`docs/extensions.md`](docs/extensions.md) for the supported patterns and the CI-backed unpublished-extension example.
 
-The `examples/http` sample shows `@hooksmith/http` posting a `page.published` event to an HTTP endpoint and projecting the HTTP response before it is stored in the run report.
+First-party extensions in this repository include standard conditions/listeners, outbound HTTP helpers, and reusable webhook ingress mappers. The webhook package exposes provider families through isolated subpaths such as `@hooksmith/webhooks/sns`.
 
-The `examples/pipeline` sample shows listener-side composition with `when`, `parallel`, `project`, `split`, `each`, and `merge` before ordinary Hooksmith listeners run.
+The examples directory includes isolated provider extensions, remote unpublished extensions, HTTP and pipeline samples, and an end-to-end SQS-to-Slack Lambda composition.
 
 ## Development
 

@@ -12,6 +12,11 @@ on:
           - major
           - minor
           - patch
+      update_downstreams:
+        description: Update downstream repositories after publishing
+        required: true
+        default: true
+        type: boolean
   release:
     types:
       - published
@@ -42,40 +47,9 @@ jobs:
 
       - name: Calculate version
         id: version
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          latest_tag="$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
-
-          if [[ -z "$latest_tag" ]]; then
-            version="0.1.0"
-          else
-            current="${latest_tag#v}"
-            IFS='.' read -r major minor patch <<< "$current"
-
-            case "${{ inputs.bump }}" in
-              major)
-                major=$((major + 1))
-                minor=0
-                patch=0
-                ;;
-              minor)
-                minor=$((minor + 1))
-                patch=0
-                ;;
-              patch)
-                patch=$((patch + 1))
-                ;;
-            esac
-
-            version="${major}.${minor}.${patch}"
-          fi
-
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=v$version" >> "$GITHUB_OUTPUT"
-          echo "previous_tag=$latest_tag" >> "$GITHUB_OUTPUT"
-          echo "Releasing v$version"
+        uses: Kralizek/github-actions/actions/calculate-next-version@v0.3
+        with:
+          bump: ${{ inputs.bump }}
 
       - name: Set package versions
         env:
@@ -134,7 +108,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
-          PREVIOUS_TAG: ${{ steps.version.outputs.previous_tag }}
+          PREVIOUS_TAG: ${{ steps.version.outputs['previous-tag'] }}
         run: |
           set -euo pipefail
 
@@ -161,6 +135,8 @@ jobs:
     permissions:
       contents: write
       id-token: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Resolve release tag
@@ -190,33 +166,27 @@ jobs:
           deno-version: v2.x
           cache: true
 
-      - name: Resolve release version
+      - name: Validate release tag
         id: version
-        shell: bash
+        uses: Kralizek/github-actions/actions/validate-release@v0.3
+        with:
+          tag: ${{ steps.release.outputs.tag }}
+          prerelease: ${{ github.event_name == 'release' && github.event.release.prerelease }}
+
+      - name: Validate package versions
         env:
-          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
         run: |
           set -euo pipefail
 
-          if [[ ! "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            echo "Release tag $TAG is not a stable semantic version." >&2
-            exit 1
-          fi
-
-          version="${TAG#v}"
-          IFS='.' read -r major minor patch <<< "$version"
-
           while IFS= read -r manifest; do
             actual="$(jq -r .version "$manifest")"
-            if [[ "$actual" != "$version" ]]; then
-              echo "$manifest has version $actual, expected $version from tag $TAG" >&2
+            if [[ "$actual" != "$VERSION" ]]; then
+              echo "$manifest has version $actual, expected $VERSION" >&2
               exit 1
             fi
           done < <(jq -r '.workspace[] + "/deno.json"' deno.json)
-
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "major_tag=v$major" >> "$GITHUB_OUTPUT"
-          echo "minor_tag=v$major.$minor" >> "$GITHUB_OUTPUT"
 
       - name: Check
         run: deno task check
@@ -252,13 +222,13 @@ jobs:
       - name: Publish packages
         run: deno publish
 
-      - name: Move action version tags
-        env:
-          MAJOR_TAG: ${{ steps.version.outputs.major_tag }}
-          MINOR_TAG: ${{ steps.version.outputs.minor_tag }}
-        run: |
-          set -euo pipefail
-
-          git tag --force "$MAJOR_TAG" HEAD
-          git tag --force "$MINOR_TAG" HEAD
-          git push --force origin "$MAJOR_TAG" "$MINOR_TAG"
+  update-downstreams:
+    needs: publish
+    if: >-
+      needs.publish.result == 'success' &&
+      (github.event_name != 'workflow_dispatch' || inputs.update_downstreams)
+    uses: ./.github/workflows/update-downstreams.yml
+    with:
+      version: ${{ needs.publish.outputs.version }}
+    secrets:
+      HOOKSMITH_DOWNSTREAM_TOKEN: ${{ secrets.HOOKSMITH_DOWNSTREAM_TOKEN }}
